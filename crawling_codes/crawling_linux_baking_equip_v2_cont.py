@@ -2,7 +2,7 @@ import os
 import platform
 
 from selenium import webdriver
-from helper_crawling import run
+from crawling_codes.helper_crawling import run
 
 if __name__ == "__main__":
     # ID, PWD
@@ -12,8 +12,8 @@ if __name__ == "__main__":
     if platform.system() == 'Linux':
         # Path
         path = '/home/hyryou94/crawling'
-        file_path = os.path.join(path, 'data_baking_equip', 'equip_v2_cont.json')
-        driver_path = os.path.join(path, 'chrome_driver/chromedriver')  # 윈도우는 .exe 붙여줘야함
+        file_path = os.path.join(path, '../data_baking_equip', 'equip_v2_cont.json')
+        driver_path = os.path.join(path, '../chrome_driver/chromedriver')  # 윈도우는 .exe 붙여줘야함
 
         # Headless
         options = webdriver.ChromeOptions()
@@ -23,9 +23,9 @@ if __name__ == "__main__":
 
     else:
         # Path
-        path = 'G:/공유 드라이브/HandaProjects/webcrawling_selenium/'
-        file_path = os.path.join(path, 'data_baking_equip', 'equip_v2_cont.json')
-        driver_path = os.path.join(path, 'chrome_driver/chromedriver.exe')
+        path = '//'
+        file_path = os.path.join(path, '../data_baking_equip', 'equip_v2_cont.json')
+        driver_path = os.path.join(path, '../chrome_driver/chromedriver.exe')
 
         # Headless
         options = webdriver.ChromeOptions()

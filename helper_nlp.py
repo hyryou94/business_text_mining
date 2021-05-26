@@ -76,10 +76,22 @@ def tokenization(df):
     text_noun = [okt.nouns(doc) for doc in df['clean text']]
 
     # 불용어 제거
-    with open('korean_stopwords.json', encoding='utf-8') as f:
+    with open('nlp_data/korean_stopwords.json', encoding='utf-8') as f:
         stopwords = json.load(f)
     stopwords.extend(['에서', '고', '이다', '는', '이', '가', '한', '씨', '"'])
 
     df['text_tokenized'] = text_noun
     df['text_tokenized'] = df['text_tokenized'].apply(lambda x: [a for a in x if a not in stopwords])
     return df
+
+# TF-IDF
+def tf_idf(df):
+    df['joined tokens'] = df['text_tokenized'].apply(
+        lambda x: str.join(' ', x).replace('오븐 엔조이', '오븐엔조이'))
+    df['text_tokenized'] = df['joined tokens'].apply(lambda x: x.split(' '))
+
+    dictionary = gensim.corpora.Dictionary(df['text_tokenized'])
+    bow_corpus = [dictionary.doc2bow(doc) for doc in df['text_tokenized']]
+    tfidf = gensim.models.TfidfModel(bow_corpus)
+    tfidf_corpus = tfidf[bow_corpus]
+    return tfidf_corpus, dictionary, df

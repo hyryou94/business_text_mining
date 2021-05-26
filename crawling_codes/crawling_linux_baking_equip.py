@@ -15,7 +15,7 @@ my_pwd = 'r945106'
 path = '/home/hyryou94/crawling'
 
 # Input
-file_path = os.path.join(path, 'data_baking_equip', 'crawled_texts_baking_equip.json')
+file_path = os.path.join(path, '../data_baking_equip', 'crawled_texts_baking_equip.json')
 menu = '//*[@id="menuLink433"]'
 
 # Headless
@@ -25,7 +25,7 @@ options.add_argument('window-size=1920x1080')
 options.add_argument("disable-gpu")
 
 # Login
-driver = webdriver.Chrome(os.path.join(path, 'chrome_driver/chromedriver'), options=options)
+driver = webdriver.Chrome(os.path.join(path, '../chrome_driver/chromedriver'), options=options)
 login_url = 'https://nid.naver.com/nidlogin.login?mode=form&url=https%3A%2F%2Fwww.naver.com'
 driver.get(login_url)
 
@@ -130,7 +130,7 @@ for k in range(200):
                     '//*[@id="app"]/div/div/div[2]/div[1]/div[3]/a[2]').get_attribute('href')
                 driver.close()
 
-                driver = webdriver.Chrome(os.path.join(path, 'chrome_driver/chromedriver'), options=options)
+                driver = webdriver.Chrome(os.path.join(path, '../chrome_driver/chromedriver'), options=options)
                 driver.get(login_url)
                 driver.execute_script("document.getElementsByName('id')[0].value = \'" + my_id + "\'")
                 driver.execute_script("document.getElementsByName('pw')[0].value = \'" + my_pwd + "\'")
@@ -156,7 +156,7 @@ for k in range(200):
     link = driver.find_element_by_xpath('//*[@id="app"]/div/div/div[1]/div[2]/a[2]').get_attribute('href')
     driver.close()
 
-    driver = webdriver.Chrome(os.path.join(path, 'chrome_driver/chromedriver'), options=options)
+    driver = webdriver.Chrome(os.path.join(path, '../chrome_driver/chromedriver'), options=options)
     driver.get(login_url)
 
     driver.execute_script("document.getElementsByName('id')[0].value = \'" + my_id + "\'")

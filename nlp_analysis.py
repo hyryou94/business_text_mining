@@ -1,28 +1,15 @@
 import os
 
-import nltk
 import gensim
-
-import pandas as pd
-import numpy as np
-
-import matplotlib.pyplot as plt
-import scipy.cluster.hierarchy as shc
-
-from nltk.stem.porter import *
-
-from wordcloud import WordCloud
-from collections import Counter, defaultdict
-
-from gensim import corpora
+from gensim.models.ldamodel import LdaModel
 from gensim.models import CoherenceModel
 
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.cluster import KMeans
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.decomposition import PCA
+import pandas as pd
+import matplotlib.pyplot as plt
 
-from helper_nlp import data_loading, parsed_data_loading, cleansing, tokenization, flatten
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+from helper_nlp import data_loading, parsed_data_loading, cleansing, tokenization, tf_idf
 
 # Initial_setting Settings
 os.environ['JAVA_HOME'] = '/usr/bin/java'
@@ -44,61 +31,24 @@ if not parsed:
 else:
     baking_data, equip_data = parsed_data_loading()
 
-# 워드 클라우드
-data1 = text_data['text tokenized'].tolist()
-
-
 # TF-IDF
-data3 = []
-for i in data1:
-    if len(i) == 0:
-        continue
-    string = i[0]
-    for w in i[1:]:
-        string += " "
-        string += w
-    data3.append(string)
-
-vectorizer = TfidfVectorizer()
-sp_matrix = vectorizer.fit_transform(data3)
-
-word2id = defaultdict(lambda: 0)  # error발생시  0으로 출력
-
-for idx, feature in enumerate(vectorizer.get_feature_names()):
-    word2id[feature] = idx
-
-tfidf = []
-for i, sent in enumerate(data3):
-#    print(f'====={i}번째 뉴스======')
-#    print([(token, sp_matrix[i, word2id[token]]) for token in sent.split()])
-    tfidf.append([(token, sp_matrix[i, word2id[token]]) for token in sent.split()])
-
-# LDA
-dictionary = corpora.Dictionary(data1)
-corpus = [dictionary.doc2bow(text) for text in data1]
-
-###################
-lda = gensim.models.ldamodel.LdaModel(corpus, num_topics=8,
-                                      id2word=dictionary)
-
-# 대표단어 5개씩 뽑기
-lda.print_topics(num_words=5)
-lda.get_document_topics(corpus)[0]
-
+baking_corpus, baking_dictionary, baking_data = tf_idf(baking_data)
+equip_corpus, equip_dictionary, equip_data = tf_idf(equip_data)
 
 # topic 간 유사도
 values = []
 coherence_value = []
-for i in range(2, 10):
-    ldamodel = gensim.models.ldamodel.LdaModel(corpus,
-                                               num_topics=i,
-                                               id2word=dictionary)
-    values.append(ldamodel.log_perplexity(corpus))
+for i in range(2, 40):
+    print(i)
+    ldamodel = gensim.models.LdaMulticore(baking_corpus, num_topics=i, id2word=dictionary,
+                                          passes=20, workers=16)
+    values.append(ldamodel.log_perplexity(baking_corpus))
 
-    coherence_model_lda = CoherenceModel(model=ldamodel, texts=data1, dictionary=dictionary, topn=10)
+    coherence_model_lda = CoherenceModel(model=ldamodel, texts=baking_data['text_tokenized'],
+                                         dictionary=baking_dictionary, topn=10)
     coherence_value.append(coherence_model_lda.get_coherence())
 
-x = range(2, 10)
+x = range(2, 40)
 plt.figure()
 plt.plot(x, values)
 plt.xlabel('Number of Topics')
@@ -110,6 +60,52 @@ plt.plot(x, coherence_value)
 plt.xlabel('Number of Topics')
 plt.ylabel('Score')
 plt.show()
+
+perplexity = pd.DataFrame(values, index=range(2, 40), columns=['perplexity'])
+coherence = pd.DataFrame(coherence_value, index=range(2, 40), columns=['coherence'])
+parameter_tuning = pd.concat([perplexity, coherence], axis=1)
+
+
+
+vectorizer1 = TfidfVectorizer()
+vectorizer2 = TfidfVectorizer()
+
+sp_matrix1 = vectorizer1.fit_transform(baking_data['joined tokens'])
+sp_matrix2 = vectorizer2.fit_transform(equip_data['joined tokens'])
+
+baking_tf_idf_sum = pd.DataFrame(sp_matrix1.sum(0), index=['sum'], columns=vectorizer1.get_feature_names()).T
+baking_01, baking_99 = baking_tf_idf_sum.quantile(0.01), baking_tf_idf_sum.quantile(0.99)
+upper_outlier = baking_tf_idf_sum[baking_tf_idf_sum['sum'] >= baking_99.values[0]]
+lower_outlier = baking_tf_idf_sum[baking_tf_idf_sum['sum'] <= baking_01.values[0]]
+filtered = baking_tf_idf_sum[(baking_tf_idf_sum['sum'] > baking_01.values[0]) & (baking_tf_idf_sum['sum'] < baking_99.values[0])]
+filtered_sparse = sp_matrix1.T[(baking_tf_idf_sum['sum'] > baking_01.values[0]) & (baking_tf_idf_sum['sum'] < baking_99.values[0])].T
+
+# LDA
+#dictionary = corpora.Dictionary(filtered.index.values)
+#corpus = [dictionary.doc2bow(text) for text in data1]
+
+###################
+from sklearn.decomposition import LatentDirichletAllocation
+lda_model = LatentDirichletAllocation(n_components=10, learning_method='online')
+lda_model.fit_transform(sp_matrix1)
+
+
+def get_topics(components, feature_names, n=10):
+    for idx, topic in enumerate(components):
+        print("Topic %d:" % (idx+1), [(feature_names[i], topic[i].round(2)) for i in topic.argsort()[:-n - 1:-1]])
+
+get_topics(lda_model.components_,vectorizer1.get_feature_names())
+
+
+lda_model = gensim.models.ldamodel.LdaModel(num_topics=8, learning_method='online')
+lda_model.fit(sp_matrix1)
+
+# 대표단어 5개씩 뽑기
+lda.print_topics(num_words=5)
+lda.get_document_topics(corpus)[0]
+
+
+
 '''
 # 클러스터링 - Ward
 sp_matrix1 = vectorizer.fit_transform(data3)

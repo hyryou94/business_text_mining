@@ -125,7 +125,7 @@ def run(my_id, my_pwd, file_path, driver_path, options, target_url, menu=None, i
                 driver.switch_to.frame('cafe_main')
                 time.sleep(5)
 
-                with open(os.path.join('error_logs', os.path.split(file_path)[-1].split('.')[0] + 'error_log.txt'), 'w') as file:
+                with open(os.path.join('../error_logs', os.path.split(file_path)[-1].split('.')[0] + 'error_log.txt'), 'w') as file:
                     file.write(next_link)
 
         # 중간저장
