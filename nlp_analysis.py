@@ -28,7 +28,7 @@ from helper_nlp import data_loading, parsed_data_loading, cleansing, tokenizatio
 os.environ['JAVA_HOME'] = '/usr/bin/java'
 
 # Parameters
-parsed = False
+parsed = True
 
 if not parsed:
     # Data Loading
