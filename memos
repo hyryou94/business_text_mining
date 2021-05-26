@@ -1,0 +1,14 @@
+'//*[@id="menuLink218"]'
+os.path.join(path, 'data_fish', 'crawled_texts_fish.json')
+
+'//*[@id="menuLink224"]'
+os.path.join(path, 'data_disease', 'crawled_texts_disease.json')
+
+'//*[@id="menuLink94"]'
+os.path.join(path, 'data_plant', 'crawled_texts_plant.json')
+
+'//*[@id="menuLink223"]'
+os.path.join(path, 'data_preg', 'crawled_texts_preg.json')
+
+'//*[@id="menuLink93"]'
+os.path.join(path, 'data2_water', 'crawled_texts_water.json')
