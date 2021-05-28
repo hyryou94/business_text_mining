@@ -1,10 +1,11 @@
 import os
 
-import gensim
-from gensim.models.ldamodel import LdaModel
-
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+import gensim
+from gensim.models.ldamodel import LdaModel
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -59,6 +60,31 @@ baking_data['topic prob'] = baking_data['label w/ prob'].apply(lambda x: x[1])
 
 topics.to_csv('topics.csv', encoding='ms949')
 
+# 날짜 변환
+baking_data['날짜'] = pd.to_datetime(baking_data['날짜'])
+period_baking_data = baking_data.copy()
+period_baking_data.index = period_baking_data['날짜'].values
+period_baking_data['날짜'] = [date.date() for date in period_baking_data.index]
+period_baking_data['count'] = np.ones(len(period_baking_data))
+
+whole_period = period_baking_data[['topic label', 'count']].groupby('topic label').sum().sort_values('count',
+                                                                                                     ascending=False)
+whole_period_percent = whole_period/whole_period.sum()
+
+time_series = period_baking_data[['날짜', 'topic label', 'count']].groupby(['날짜', 'topic label']).sum().reset_index()
+time_series_result = time_series.pivot_table(columns=['topic label'], index=['날짜'], values='count').fillna(0)
+time_series_result.index = pd.to_datetime(time_series_result.index)
+monthly_result = time_series_result.resample('3M').sum()
+monthly_percentage = (monthly_result.T / monthly_result.sum(1)).T
+
+plt.plot(monthly_percentage)
+plt.legend(monthly_percentage.columns)
+plt.show()
+
+plt.plot(monthly_percentage[18])
+plt.legend([monthly_percentage[18].name])
+plt.show()
+
 #
 for each_topic in range(0, 19):
     baking_data[['topic prob', '제목', '본문', '댓글']][baking_data['topic label'] == each_topic].to_excel(
@@ -78,4 +104,4 @@ keep_data['second label w/ prob'] = keep_data['second topic'].apply(lambda x: ma
 keep_data['second topic label'] = keep_data['second label w/ prob'].apply(lambda x: x[0])
 keep_data['second topic prob'] = keep_data['second label w/ prob'].apply(lambda x: x[1])
 
-keep_data[['second topic label', 'second topic prob', '제목', '본문', '댓글']].to_xlsx('')
+keep_data[['second topic label', 'second topic prob', '제목', '본문', '댓글']].to_excel('보관.xlsx', encoding='ms949')
