@@ -13,7 +13,7 @@ if __name__ == "__main__":
     if platform.system() == 'Linux':
         # Path
         path = '/home/hyryou94/crawling'
-        file_path = os.path.join(path, '../data_baking', 'baking_v2_cont.json')
+        file_path = os.path.join(path, '../data_wine', 'baking_v2_cont.json')
         driver_path = os.path.join(path, '../chrome_driver/chromedriver')  # 윈도우는 .exe 붙여줘야함
 
         # Headless
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     else:
         # Path
         path = '//'
-        file_path = os.path.join(path, '../data_baking', 'baking_v2_cont.json')
+        file_path = os.path.join(path, '../data_wine', 'baking_v2_cont.json')
         driver_path = os.path.join(path, '../chrome_driver/chromedriver.exe')
 
         # Headless
