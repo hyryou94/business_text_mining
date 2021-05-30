@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from helper_nlp import data_loading, parsed_data_loading, cleansing, tokenization, tf_idf, pass_opt, lda_param_opt
+from helper_nlp import data_loading, parsed_data_loading, cleansing, tokenization, tf_idf_gensim, pass_opt, lda_param_opt
 
 # Initial_setting Settings
 os.environ['JAVA_HOME'] = '/usr/bin/java'
