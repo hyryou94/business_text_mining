@@ -16,15 +16,16 @@ os.environ['JAVA_HOME'] = '/usr/bin/java'
 
 baking_data, equip_data = data_loading()
 
-nouns = False
+nouns = True
+tokenizer = 'kiwi'
 
 # 텍스트 클렌징
 if nouns:
-    baking_data = tokenization(cleansing(baking_data))
-    baking_data.to_json('parsed_data/parsed_baking.json', orient='table')
+    baking_data = tokenization(cleansing(baking_data), tokenizer)
+    baking_data.to_json('parsed_data/parsed_baking_%s.json' % tokenizer, orient='table')
 
-    equip_data = tokenization(cleansing(equip_data))
-    equip_data.to_json('parsed_data/parsed_equip.json', orient='table')
+    equip_data = tokenization(cleansing(equip_data), tokenizer)
+    equip_data.to_json('parsed_data/parsed_equip_%s.json' % tokenizer, orient='table')
 
 else:
     baking_data = tokenization(cleansing(baking_data), nouns=nouns)
@@ -32,3 +33,4 @@ else:
 
     equip_data = tokenization(cleansing(equip_data), nouns=nouns)
     equip_data.to_json('parsed_data/parsed_equip_not_nouns.json', orient='table')
+

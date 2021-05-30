@@ -1,19 +1,16 @@
+import json
 import os
 import re
-import json
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 
 import gensim
-from gensim.models.ldamodel import LdaModel
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from gensim.models import CoherenceModel
-
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-
+from gensim.models.ldamodel import LdaModel
+from kiwipiepy import Kiwi
 from konlpy.tag import Okt
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 os.environ['JAVA_HOME'] = '/usr/bin/java'
 
@@ -34,9 +31,13 @@ def data_loading():
     return baking_data, equip_data
 
 
-def parsed_data_loading():
-    baking_data = pd.read_json('parsed_data/parsed_baking.json', orient='table')
-    equip_data = pd.read_json('parsed_data/parsed_equip.json', orient='table')
+def parsed_data_loading(nouns=True, tokenizer='kiwi'):
+    if nouns:
+        baking_data = pd.read_json('parsed_data/parsed_baking_%s.json' % tokenizer, orient='table')
+        equip_data = pd.read_json('parsed_data/parsed_equip_%s.json' % tokenizer, orient='table')
+    else:
+        baking_data = pd.read_json('parsed_data/parsed_baking_not_nouns.json', orient='table')
+        equip_data = pd.read_json('parsed_data/parsed_equip_not_nouns.json', orient='table')
     return baking_data, equip_data
 
 
@@ -71,21 +72,40 @@ def cleansing(df):
 
 
 # 형태소 분석
-def tokenization(df, nouns=True):
-    okt = Okt()
+def tokenization(df, nouns=True, tokenizer='kiwi'):
+    if tokenizer == 'okt':
+        okt = Okt()
 
-    if nouns:
-        target_title = [okt.nouns(doc) for doc in df['clean title']]
-        target_text = [okt.nouns(doc) for doc in df['clean text']]
+        if nouns:
+            target_title = [okt.nouns(doc) for doc in df['clean title']]
+            target_text = [okt.nouns(doc) for doc in df['clean text']]
 
+        else:
+            target_title = [okt.morphs(doc) for doc in df['clean title']]
+            target_text = [okt.morphs(doc) for doc in df['clean text']]
     else:
-        target_title = [okt.morphs(doc) for doc in df['clean title']]
-        target_text = [okt.morphs(doc) for doc in df['clean text']]
+        kiwi = Kiwi(num_workers=16)
+        kiwi.prepare()
+
+        temp_title = [[each_word[0] if ('NNG' in each_word[1]) or ('NNP' in each_word[1])
+                       else each_word[0] + '다' if ('VV' in each_word[1]) or ('VA' in each_word[1])
+                       else None for each_word in each_doc[0][0]]
+                      for each_doc in kiwi.analyze(df['clean title'], top_n=1)]
+
+        target_title = [[each_word for each_word in each_doc if each_word] for each_doc in temp_title]
+
+        temp_text = [[each_word[0] if ('NNG' in each_word[1]) or ('NNP' in each_word[1])
+                      else each_word[0] + '다' if ('VV' in each_word[1]) or ('VA' in each_word[1])
+                      else None for each_word in each_doc[0][0]]
+                     for each_doc in kiwi.analyze(df['clean title'], top_n=1)]
+
+        target_text = [[each_word for each_word in each_doc if each_word] for each_doc in temp_text]
 
     # 불용어 제거
     with open('nlp_data/korean_stopwords.json', encoding='utf-8') as f:
         stopwords = json.load(f)
-    stopwords.extend(['에서', '고', '이다', '는', '이', '가', '한', '씨', '"', '에', '요', '걸', '더', '케', '거', '분'])
+    stopwords.extend(['에서', '고', '이다', '는', '이', '가', '한', '씨', '"', '에', '요', '걸', '더', '케', '거', '분',
+                      'ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ'])
 
     df['title_tokenized'] = target_title
     df['title_tokenized'] = df['title_tokenized'].apply(lambda x: [a for a in x if a not in stopwords])
