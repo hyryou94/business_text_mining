@@ -13,7 +13,7 @@ if __name__ == "__main__":
     if platform.system() == 'Linux':
         # Path
         path = os.getcwd()
-        file_path = os.path.join('/hyryou94/gdrive/SharedDrives/HandaProjects/wine_crawling', 'wine_text.json')
+        file_path = os.path.join('/hyryou94/gdrive/SharedDrives/HandaProjects/wine_crawling', 'wine_recommend_text.json')
         driver_path = os.path.join(path, 'chrome_driver/chromedriver')  # 윈도우는 .exe 붙여줘야함
 
         # Headless
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     else:
         # Path
         path = '//'
-        file_path = os.path.join(path, 'data_baking', 'wine_text.json')
+        file_path = os.path.join(path, 'data_baking', 'wine_recommend_text.json')
         driver_path = os.path.join(path, 'chrome_driver/chromedriver.exe')
 
         # Options
@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     # Input
     target_url = 'https://cafe.naver.com/winerack24'
-    menu = '//*[@id="menuLink60"]'
+    menu = '//*[@id="menuLink78"]'
 
     # Other parameters
     iteration = 200
