@@ -21,10 +21,9 @@ tokenizer = 'kiwi'
 
 # Analysis
 baking_data, equip_data = parsed_data_loading(nouns=False, tokenizer=tokenizer)
-baking_vectorizer, baking_matrix, baking_data2 = tf_idf_sklearn(baking_data)
+baking_vectorizer, baking_matrix, baking_data = tf_idf_sklearn(baking_data)
 baking_corpus_sk = np.array(baking_vectorizer.get_feature_names())
 
-# baking_drop_words = ['아시', '보신', '가요', '건가', '구우', '안나', '정말', '일반', '움색', '하나요', '그냥', '보고', '자꾸']
 baking_drop_words = ['ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ']
 baking_corpus_sk, baking_matrix = drop_certain_words(baking_corpus_sk, baking_matrix, baking_drop_words)
 
@@ -51,4 +50,40 @@ if save:
             os.path.join(gdrive_path, 'clustered/text_%d.xlsx') % each_topic, encoding='ms949')
 
 whole_period, monthly = time_series_analysis(baking_data)
-each_cluster_data, each_cluster_topic = second_lda(baking_data, cluster_num=0)
+# each_cluster_data, each_cluster_topic = second_lda(baking_data, cluster_num=4)
+
+# RQ2
+baking_data['조회수'] = baking_data['조회수'].apply(
+    lambda x: int(x.replace('조회 ', '').replace(',', '').replace('.', '').replace('만', '000')))
+sorted_baking_data = baking_data.sort_values('조회수', ascending=False).copy()
+top2000 = sorted_baking_data[:2000]
+top2000_vectorizer, top2000_matrix, top2000_data = tf_idf_sklearn(top2000)
+top2000_corpus_sk = np.array(top2000_vectorizer.get_feature_names())
+
+if save:
+    lda_sk2000 = LatentDirichletAllocation(n_components=7)
+    lda_sk2000.fit(top2000_matrix)
+    pickle.dump(lda_sk2000, open('lda_model_sk_top2000.p', 'wb'))
+
+else:
+    lda_sk2000 = pickle.load(open('lda_model_sk_top2000.p', 'rb'))
+
+top2000_topics = display_topics(lda_sk2000, top2000_corpus_sk, 10)
+top2000_topics_df = pd.DataFrame(top2000_topics)
+
+top2000_topic_dist = lda_sk2000.transform(top2000_matrix)
+top2000_data['topic label'] = top2000_topic_dist.argmax(1)
+top2000_data['topic prob'] = top2000_topic_dist.max(1)
+
+top2000_data[top2000_data['topic label'] == 5].sort_values('topic prob', ascending=False)['제목'][:40]# [40:80]
+# 1 : 창업, 수업, 가게
+# 2 : 버터, 크림치즈, 휘핑크림 선택
+# 3 : 재료, 완성품 보관방법
+# 4 : 아몬드가루, 슈가파우더, 마카롱
+# 5 : 실패원인
+
+top2000_data['count'] = np.ones(len(top2000_data))
+views = top2000_data[['topic label', '조회수']].groupby('topic label').sum()
+num_docs = top2000_data[['topic label', 'count']].groupby('topic label').sum()
+
+views/num_docs.values
