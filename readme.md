@@ -30,4 +30,6 @@
 
 ## 실행방법
 
-1. 기본적으로 nlp_analysis2.py만 보시면 됩니다.
+1. 크롤링은 위에 써있듯이 네 가지 버전이 있습니다. 본 연구가 기존에는 두 게시판을 모두 사용하려 했으나 베이킹 게시판만 사용하게 되어 해당되는 코드는 crawling_linux_baking_v2.py입니다. cont가 붙은 파일은 이어서 진행하기 위한 파일이니 crawling_linux_baking_v2.py만 실행해보시면 될 것 같습니다. 
+
+2. 분석은 nlp_analysis2.py만 보시면 됩니다.
