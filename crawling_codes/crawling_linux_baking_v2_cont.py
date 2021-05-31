@@ -12,8 +12,8 @@ if __name__ == "__main__":
     if platform.system() == 'Linux':
         # Path
         path = '/home/hyryou94/crawling'
-        file_path = os.path.join(path, '../data_baking', 'baking_v2_cont2.json')
-        driver_path = os.path.join(path, '../chrome_driver/chromedriver') #윈도우는 .exe 붙여줘야함
+        file_path = os.path.join(path, 'data_baking', 'baking_v2_cont2.json')
+        driver_path = os.path.join(path, 'chrome_driver', 'chromedriver')
 
         # Headless
         options = webdriver.ChromeOptions()
@@ -24,8 +24,8 @@ if __name__ == "__main__":
     else:
         # Path
         path = '//'
-        file_path = os.path.join(path, '../data_baking', 'baking_v2_cont2.json')
-        driver_path = os.path.join(path, '../chrome_driver/chromedriver.exe')
+        file_path = os.path.join(path, 'data_baking', 'baking_v2_cont2.json')
+        driver_path = os.path.join(path, 'chrome_driver', 'chromedriver.exe')
 
         # Headless
         options = webdriver.ChromeOptions()
