@@ -5,8 +5,8 @@ from helper_crawling import run, crawling_settings
 
 if __name__ == "__main__":
     # ID, PWD
-    my_id = 'hobbang1994'
-    my_pwd = 'r945106'
+    my_id = ''
+    my_pwd = ''
 
     # Input
     target_url = 'https://cafe.naver.com/delonghi'
