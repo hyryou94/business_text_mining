@@ -10,7 +10,7 @@ from gensim.models import CoherenceModel
 from gensim.models.ldamodel import LdaModel
 from kiwipiepy import Kiwi
 from konlpy.tag import Okt
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 os.environ['JAVA_HOME'] = '/usr/bin/java'
 
@@ -150,12 +150,55 @@ def tf_idf_sklearn(df, drop_one_letter=False):
     return vectorizer, sparse_matrix, df
 
 
+def count_sklearn(df, drop_one_letter=False):
+    if drop_one_letter:
+        df['text_tokenized'] = df['text_tokenized'].apply(lambda x: [word for word in x if len(word) > 1])
+    df['joined tokens'] = df['text_tokenized'].apply(
+        lambda x: str.join(' ', x).replace(
+            '오븐 엔조이', '오븐엔조이').replace(
+            '휘 낭시', '휘낭시에').replace(
+            '베이 킹', '베이킹').replace(
+            '스 메그', '스메그'))
+    df['text_tokenized'] = df['joined tokens'].apply(lambda x: x.split(' '))
+
+    vectorizer = CountVectorizer(min_df=0.01)
+    sparse_matrix = vectorizer.fit_transform(df['joined tokens'])
+    return vectorizer, sparse_matrix
+
+
 def drop_certain_words(corpus, sparse_matrix, drop_words):
     drop_words_index = [np.where(corpus == word)[0][0] for word in drop_words]
     to_keep = sorted(set(range(sparse_matrix.shape[1])) - set(drop_words_index))
     corpus = corpus[to_keep]
     sparse_matrix = sparse_matrix[:, to_keep]
     return corpus, sparse_matrix
+
+
+def analysis(df, save):
+    vectorizer, matrix, df = tf_idf_sklearn(df)
+    corpus = np.array(vectorizer.get_feature_names())
+
+    drop_words = ['ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ']
+    corpus, matrix = drop_certain_words(corpus, matrix, drop_words)
+
+    if save:
+        lda_sk = LatentDirichletAllocation(n_components=20)
+        lda_sk.fit(matrix)
+        pickle.dump(lda_sk, open('lda_model_sk3.p', 'wb'))
+
+    else:
+        lda_sk = pickle.load(open('lda_model_sk3.p', 'rb'))
+
+    topics = display_topics(lda_sk, corpus, 10)
+    topics_df = pd.DataFrame(topics)
+
+    topic_dist = lda_sk.transform(matrix)
+    df['topic label'] = topic_dist.argmax(1)
+    df['topic prob'] = topic_dist.max(1)
+
+    df['count'] = np.ones(len(df))
+    topic_doc_count = df[['topic label', 'count']].groupby('topic label').sum().sort_values('count', ascending=False)
+    return df, topics_df.loc[topic_doc_count.index], lda_sk
 
 
 def display_topics(model, feature_names, no_top_words):
@@ -257,14 +300,15 @@ def time_series_analysis(df):
     time_series = period_df[['날짜', 'topic label', 'count']].groupby(['날짜', 'topic label']).sum().reset_index()
     time_series_result = time_series.pivot_table(columns=['topic label'], index=['날짜'], values='count').fillna(0)
     time_series_result.index = pd.to_datetime(time_series_result.index)
-    monthly_result = time_series_result.resample('3M').sum()
+    monthly_result = time_series_result.loc['2018-06-01':].resample('3M').sum()
     monthly_percentage = (monthly_result.T / monthly_result.sum(1)).T
 
+    plt.figure(figsize=(10, 5))
     plt.plot(monthly_percentage)
-    plt.legend(monthly_percentage.columns)
+    plt.legend(['Topic %d' % (number+1) for number in monthly_percentage.columns])
     plt.show()
 
-    return whole_period_percentage, monthly_percentage
+    return whole_period_percentage, monthly_percentage, time_series_result
 
 
 def second_lda(df, cluster_num):
