@@ -6,8 +6,8 @@ from helper_crawling import run
 
 if __name__ == "__main__":
     # ID, PWD
-    my_id = 'hobbang1994'
-    my_pwd = 'r945106'
+    my_id = ''
+    my_pwd = ''
 
     if platform.system() == 'Linux':
         # Path
