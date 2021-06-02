@@ -11,9 +11,8 @@ if __name__ == "__main__":
 
     if platform.system() == 'Linux':
         # Path
-        path = '/home/hyryou94/crawling'
-        file_path = os.path.join(path, 'data_baking', 'baking_v2_cont2.json')
-        driver_path = os.path.join(path, 'chrome_driver/chromedriver') #윈도우는 .exe 붙여줘야함
+        file_path = os.path.join('data_baking', 'baking_v2_cont2.json')
+        driver_path = os.path.join('chrome_driver', 'chromedriver')
 
         # Headless
         options = webdriver.ChromeOptions()
@@ -23,9 +22,8 @@ if __name__ == "__main__":
 
     else:
         # Path
-        path = 'G:/공유 드라이브/HandaProjects/webcrawling_selenium/'
-        file_path = os.path.join(path, 'data_baking', 'baking_v2_cont2.json')
-        driver_path = os.path.join(path, 'chrome_driver/chromedriver.exe')
+        file_path = os.path.join('data_baking', 'baking_v2_cont2.json')
+        driver_path = os.path.join('chrome_driver', 'chromedriver.exe')
 
         # Headless
         options = webdriver.ChromeOptions()

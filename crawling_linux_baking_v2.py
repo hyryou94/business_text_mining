@@ -1,37 +1,12 @@
 import os
-import platform
 
 from selenium import webdriver
-from helper_crawling import run
+from helper_crawling import run, crawling_settings
 
 if __name__ == "__main__":
     # ID, PWD
     my_id = 'hobbang1994'
     my_pwd = 'r945106'
-
-    # Input
-    if platform.system() == 'Linux':
-        # Path
-        path = '/home/hyryou94/crawling'
-        file_path = os.path.join(path, 'data_baking', 'baking_v2_cont.json')
-        driver_path = os.path.join(path, 'chrome_driver/chromedriver')  # 윈도우는 .exe 붙여줘야함
-
-        # Headless
-        options = webdriver.ChromeOptions()
-        options.add_argument('headless')
-        options.add_argument('window-size=1920x1080')
-        options.add_argument("disable-gpu")
-
-    else:
-        # Path
-        path = 'G:/공유 드라이브/HandaProjects/webcrawling_selenium/'
-        file_path = os.path.join(path, 'data_baking', 'baking_v2_cont.json')
-        driver_path = os.path.join(path, 'chrome_driver/chromedriver.exe')
-
-        # Headless
-        options = webdriver.ChromeOptions()
-        options.add_argument('window-size=1920x1080')
-        options.add_argument("disable-gpu")
 
     # Input
     target_url = 'https://cafe.naver.com/delonghi'
@@ -40,9 +15,10 @@ if __name__ == "__main__":
     # Other parameters
     iteration = 200
     batch_size = 250
+    path_options = crawling_settings()
 
     # Run
     run(my_id, my_pwd,
-        file_path=file_path, driver_path=driver_path, options=options,
+        file_path=path_options.file_path, driver_path=path_options.driver_path, options=path_options.options,
         target_url=target_url, menu=menu, initial=True,
         iteration=iteration, batch_size=batch_size)

@@ -1,14 +1,16 @@
 # Settings
 import os
-from selenium import webdriver
+import platform
 import time
 
 import pandas as pd
 from bs4 import BeautifulSoup as bs
 
+from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+
 
 
 # Login
@@ -148,3 +150,27 @@ def run(my_id, my_pwd, file_path, driver_path, options, target_url, menu=None, i
     crawled_texts = pd.DataFrame(crawled,
                                  columns=['날짜', '조회수', '댓글개수', '좋아요', '제목', '닉네임', '본문', '댓글'])
     crawled_texts.to_json(file_path, orient='table')
+
+
+class crawling_settings:
+    def __init__(self):
+        if platform.system() == 'Linux':
+            # Path
+            self.file_path = os.path.join('data_baking', 'baking_v2_cont.json')
+            self.driver_path = os.path.join('chrome_driver', 'chromedriver')
+
+            # Headless
+            self.options = webdriver.ChromeOptions()
+            self.options.add_argument('headless')
+            self.options.add_argument('window-size=1920x1080')
+            self.options.add_argument("disable-gpu")
+
+        else:
+            # Path
+            self.file_path = os.path.join('data_baking', 'baking_v2_cont.json')
+            self.driver_path = os.path.join('chrome_driver', 'chromedriver.exe')
+
+            # Headless
+            self.options = webdriver.ChromeOptions()
+            self.options.add_argument('window-size=1920x1080')
+            self.options.add_argument("disable-gpu")
