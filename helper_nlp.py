@@ -2,43 +2,25 @@ import json
 import os
 import re
 
-import gensim
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+import gensim
 from gensim.models import CoherenceModel
 from gensim.models.ldamodel import LdaModel
 from kiwipiepy import Kiwi
 from konlpy.tag import Okt
+
+from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 os.environ['JAVA_HOME'] = '/usr/bin/java'
 
 
 def data_loading():
-    raw_data1 = pd.read_json('data_baking/baking_v2.json', orient='table').dropna()
-    raw_data2 = pd.read_json('data_baking/baking_v2_cont.json', orient='table').dropna()
-    raw_data1.columns = ['날짜', '조회수', '댓글개수', '좋아요', '제목', '닉네임', '본문', '댓글']  # 크롤링 과정에서 칼럽 라벨링 잘못됨...
-    raw_data2.columns = ['날짜', '조회수', '댓글개수', '좋아요', '제목', '닉네임', '본문', '댓글']  # 크롤링 과정에서 칼럽 라벨링 잘못됨...
-
-    raw_data3 = pd.read_json('data_equip/equip_v2.json', orient='table').dropna()
-    raw_data4 = pd.read_json('data_equip/equip_v2_cont.json', orient='table').dropna()
-    raw_data4.columns = ['날짜', '조회수', '댓글개수', '좋아요', '제목', '닉네임', '본문', '댓글']  # 크롤링 과정에서 칼럽 라벨링 잘못됨...
-
-    baking_data = pd.concat([raw_data1, raw_data2], ignore_index=True)
-    equip_data = pd.concat([raw_data3, raw_data4], ignore_index=True)
-
-    return baking_data, equip_data
-
-
-def parsed_data_loading(nouns=True, tokenizer='kiwi'):
-    if nouns:
-        baking_data = pd.read_json('parsed_data/parsed_baking_%s.json' % tokenizer, orient='table')
-        equip_data = pd.read_json('parsed_data/parsed_equip_%s.json' % tokenizer, orient='table')
-    else:
-        baking_data = pd.read_json('parsed_data/parsed_baking_not_nouns.json', orient='table')
-        equip_data = pd.read_json('parsed_data/parsed_equip_not_nouns.json', orient='table')
-    return baking_data, equip_data
+    baking_data = pd.read_json('data_baking/baking_v2.json', orient='table').dropna().sample(2000)
+    return baking_data
 
 
 def clean_text(text):
@@ -68,6 +50,8 @@ def cleansing(df):
     del_content2 = '타카페 또는 블로그의 이벤트, 공동구매, 행사등의 공유는 금지되어있습니다.\n게시물에 주요내용이 없는 외부링크 공유 게시물은 삭제될 수 있습니다.\n원활한 카페 운영을 위해 이해와 협조 부탁드립니다.'
     df['clean title'] = df['제목'].apply(clean_text)
     df['clean text'] = df['본문'].apply(lambda x: clean_text(x.replace(del_content1, '').replace(del_content2, '')))
+    df['조회수'] = df['조회수'].apply(
+        lambda x: int(x.replace('조회 ', '').replace(',', '').replace('.', '').replace('만', '000')))
     return df
 
 
@@ -116,24 +100,6 @@ def tokenization(df, nouns=True, tokenizer='kiwi'):
 
 
 # TF-IDF
-def tf_idf_gensim(df, drop_one_letter=False):
-    if drop_one_letter:
-        df['text_tokenized'] = df['text_tokenized'].apply(lambda x: [word for word in x if len(word) > 1])
-    df['joined tokens'] = df['text_tokenized'].apply(
-        lambda x: str.join(' ', x).replace(
-            '오븐 엔조이', '오븐엔조이').replace(
-            '휘 낭시', '휘낭시에'). replace(
-            '베이 킹', '베이킹').replace(
-            '스 메그', '스메그'))
-    df['text_tokenized'] = df['joined tokens'].apply(lambda x: x.split(' '))
-
-    dictionary = gensim.corpora.Dictionary(df['text_tokenized'])
-    bow_corpus = [dictionary.doc2bow(doc) for doc in df['text_tokenized']]
-    tfidf = gensim.models.TfidfModel(bow_corpus)
-    tfidf_corpus = tfidf[bow_corpus]
-    return tfidf_corpus, dictionary, df
-
-
 def tf_idf_sklearn(df, drop_one_letter=False):
     if drop_one_letter:
         df['text_tokenized'] = df['text_tokenized'].apply(lambda x: [word for word in x if len(word) > 1])
@@ -174,33 +140,6 @@ def drop_certain_words(corpus, sparse_matrix, drop_words):
     return corpus, sparse_matrix
 
 
-def analysis(df, save):
-    vectorizer, matrix, df = tf_idf_sklearn(df)
-    corpus = np.array(vectorizer.get_feature_names())
-
-    drop_words = ['ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ']
-    corpus, matrix = drop_certain_words(corpus, matrix, drop_words)
-
-    if save:
-        lda_sk = LatentDirichletAllocation(n_components=20)
-        lda_sk.fit(matrix)
-        pickle.dump(lda_sk, open('lda_model_sk3.p', 'wb'))
-
-    else:
-        lda_sk = pickle.load(open('lda_model_sk3.p', 'rb'))
-
-    topics = display_topics(lda_sk, corpus, 10)
-    topics_df = pd.DataFrame(topics)
-
-    topic_dist = lda_sk.transform(matrix)
-    df['topic label'] = topic_dist.argmax(1)
-    df['topic prob'] = topic_dist.max(1)
-
-    df['count'] = np.ones(len(df))
-    topic_doc_count = df[['topic label', 'count']].groupby('topic label').sum().sort_values('count', ascending=False)
-    return df, topics_df.loc[topic_doc_count.index], lda_sk
-
-
 def display_topics(model, feature_names, no_top_words):
     topics = []
     for topic_idx, topic in enumerate(model.components_):
@@ -212,80 +151,32 @@ def display_topics(model, feature_names, no_top_words):
     return topics
 
 
+def doc_labeling(df, matrix, corpus, model):
+    topics = display_topics(model, corpus, 10)
+    topics_df = pd.DataFrame(topics)
+
+    topic_dist = model.transform(matrix)
+    df['topic label'] = topic_dist.argmax(1)
+    df['topic prob'] = topic_dist.max(1)
+    return df, topics_df
+
+
+def analysis(df, n_topics):
+    vectorizer, matrix, df = tf_idf_sklearn(df)
+
+    corpus = np.array(vectorizer.get_feature_names())
+    # drop_words = ['ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ']
+    # corpus, matrix = drop_certain_words(corpus, matrix, drop_words)
+    # 원래는 사용하지 않는 단어들을 제거하는 단계가 있으나 제출용으로 샘플을 줄이면서 해당 단계가 필요없게 됨
+
+    lda_sk = LatentDirichletAllocation(n_components=n_topics)
+    lda_sk.fit(matrix)
+
+    df, topics_df = doc_labeling(df, matrix, corpus, lda_sk)
+    return df, topics_df, lda_sk
+
+
 # LDA
-# Pass optimization
-def pass_opt(corpus, dictionary, data, min_pass, max_pass):
-    perplexity_value = []
-    coherence_value = []
-
-    for p in range(min_pass, max_pass):
-        print(p)
-        ldamodel = gensim.models.LdaMulticore(corpus, num_topics=20, id2word=dictionary, passes=p, workers=16)
-        coherence_model_lda = CoherenceModel(model=ldamodel, texts=data['text_tokenized'],
-                                             dictionary=dictionary, topn=10, coherence='c_v')
-        perplexity_value.append(ldamodel.log_perplexity(corpus))
-        coherence_value.append(coherence_model_lda.get_coherence())
-
-    # graphing_opt_res(coherence_value, perplexity_value, min_pass, max_pass)
-
-    perplexity = pd.DataFrame(perplexity_value, index=range(min_pass, max_pass), columns=['perplexity'])
-    coherence = pd.DataFrame(coherence_value, index=range(min_pass, max_pass), columns=['coherence'])
-    parameter_tuning = pd.concat([perplexity, coherence], axis=1)
-
-    return parameter_tuning
-
-
-# Num_topic optimization
-def lda_param_opt(corpus, dictionary, data, pass_value=20, min_topic=2, max_topic=40):
-    perplexity_value = []
-    coherence_value = []
-    for i in range(min_topic, max_topic + 1):
-        print(i)
-        ldamodel = gensim.models.LdaMulticore(corpus, num_topics=i, id2word=dictionary,
-                                              passes=pass_value, workers=16)
-        coherence_model_lda = CoherenceModel(model=ldamodel, texts=data['text_tokenized'],
-                                             dictionary=dictionary, topn=10, coherence='c_v')
-        perplexity_value.append(ldamodel.log_perplexity(corpus))
-        coherence_value.append(coherence_model_lda.get_coherence())
-
-    # graphing_opt_res(coherence_value, perplexity_value, min_topic, max_topic)
-
-    perplexity = pd.DataFrame(perplexity_value, index=range(min_topic, max_topic+1), columns=['perplexity'])
-    coherence = pd.DataFrame(coherence_value, index=range(min_topic, max_topic+1), columns=['coherence'])
-    parameter_tuning = pd.concat([perplexity, coherence], axis=1)
-
-    return parameter_tuning
-
-
-# Graphing
-def graphing_opt_res(coherence_value, perplexity_value, min_value, max_value):
-    x = range(min_value, max_value)
-    plt.figure()
-    plt.plot(x, perplexity_value)
-    plt.xlabel('Number of Topics')
-    plt.ylabel('Perplexity')
-    plt.show()
-
-    plt.figure()
-    plt.plot(x, coherence_value)
-    plt.xlabel('Number of Topics')
-    plt.ylabel('Coherence')
-    plt.show()
-
-
-# Document labeling
-def doc_labeling(df, corpus, model):
-    lda_topics = sorted(model.print_topics(num_words=11), key=lambda x: x[0])
-    topic_result = pd.DataFrame(
-        [[word.split('*')[1].replace('\"', '') for word in topic[1].split(' + ')] for topic in lda_topics])
-
-    df['topic'] = [model[each_doc] for each_doc in corpus]
-    df['label w/ prob'] = df['topic'].apply(lambda x: max(x, key=lambda y: y[1]))
-    df['topic label'] = df['label w/ prob'].apply(lambda x: x[0])
-    df['topic prob'] = df['label w/ prob'].apply(lambda x: x[1])
-    return df, topic_result
-
-
 def time_series_analysis(df):
     df['날짜'] = pd.to_datetime(df['날짜'])
     period_df = df.copy()
@@ -311,19 +202,6 @@ def time_series_analysis(df):
     return whole_period_percentage, monthly_percentage, time_series_result
 
 
-def second_lda(df, cluster_num):
-    cluster_df = df[df['topic label'] == cluster_num].copy()
-    cluster_df['text_tokenized'] = cluster_df['title_tokenized'] + cluster_df['text_tokenized']
-    cluster_corpus, cluster_dictionary, cluster_df = tf_idf_gensim(cluster_df, drop_one_letter=False)
-    cluster_model = gensim.models.LdaMulticore(cluster_corpus, num_topics=5, id2word=cluster_dictionary,
-                                               passes=7, workers=16, random_state=1)
-
-    second_lda_topics = sorted(cluster_model.print_topics(num_words=10), key=lambda x: x[0])
-    second_topics = pd.DataFrame(
-        [[word.split('*')[1].replace('\"', '') for word in topic[1].split(' + ')] for topic in second_lda_topics])
-
-    cluster_df['second topic'] = [cluster_model[each_doc] for each_doc in cluster_corpus]
-    cluster_df['second label w/ prob'] = cluster_df['second topic'].apply(lambda x: max(x, key=lambda x: x[1]))
-    cluster_df['second topic label'] = cluster_df['second label w/ prob'].apply(lambda x: x[0])
-    cluster_df['second topic prob'] = cluster_df['second label w/ prob'].apply(lambda x: x[1])
-    return cluster_df, second_topics
+def closer_look(df, topic_num, content, limit=40):
+    each_topic_df = df[df['topic label'] == topic_num]
+    print(each_topic_df[['topic prob', '제목', '본문', '댓글']].sort_values(by='topic prob', ascending=False)[content][:limit])

@@ -1,70 +1,60 @@
 import os
+import pickle
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import gensim
-from gensim.models.ldamodel import LdaModel
 
-from helper_nlp import data_loading, parsed_data_loading, cleansing, tokenization, tf_idf_gensim, pass_opt, \
-    lda_param_opt, doc_labeling, time_series_analysis, second_lda
+from helper_nlp import data_loading, cleansing, tokenization, tf_idf_sklearn, count_sklearn, analysis, drop_certain_words, \
+    display_topics, time_series_analysis, doc_labeling, closer_look
 
-# Initial_setting Settings
-os.environ['JAVA_HOME'] = '/usr/bin/java'
+# Input
+tokenizer = 'kiwi'
 
-# Parameters
-parsed = True
-parameter_optimization = False
-save = False
+# Analysis
+baking_data = data_loading() # data loading
+baking_data = tokenization(cleansing(baking_data)) # cleansing and tokenizing
 
-# Data Loading
-if not parsed:
-    baking_data, equip_data = data_loading()
+# Frequency analysis
+baking_count, baking_dtm = count_sklearn(baking_data)
+count_corpus_sk = baking_count.get_feature_names()
+frequency = pd.DataFrame(baking_dtm.sum(0), columns=count_corpus_sk).T.sort_values(0, ascending=False)
 
-    # 텍스트 클렌징
-    baking_data = tokenization(cleansing(baking_data))
-    baking_data.to_json('parsed_data/parsed_baking.json', orient='table')
+# Method 1
+baking_data, topics_df, lda_sk = analysis(baking_data, n_topics=20)
 
-    equip_data = tokenization(cleansing(equip_data))
-    equip_data.to_json('parsed_data/parsed_equip.json', orient='table')
-else:
-    baking_data, equip_data = parsed_data_loading()
+# Method 2
+top_filtering = [True if each_label in [14, 16, 0, 5, 2] else False for each_label in baking_data['topic label']]
+top_topics = baking_data[top_filtering]
 
-# TF-IDF
-baking_corpus, baking_dictionary, baking_data = tf_idf_gensim(baking_data, drop_one_letter=False)
+whole_period, monthly_percentage, time_series_result = time_series_analysis(top_topics)
+plt.figure(figsize=(10, 5))
+plt.plot(time_series_result.loc['2018-06-01':'2021-04-30'].resample('M').sum().sum(1))
+plt.show()
 
-# LDA 파라미터 최적화
-if parameter_optimization:
-    pass_result = pass_opt(corpus=baking_corpus, dictionary=baking_dictionary, data=baking_data,
-                           min_pass=1, max_pass=40)
-    pass_result.to_csv('parameter_pass.csv', encoding='ms949')
-    topic_num_result = lda_param_opt(corpus=baking_corpus, dictionary=baking_dictionary, data=baking_data,
-                                     min_topic=2, max_topic=40)
-    topic_num_result.to_csv('parameter_topic.csv', encoding='ms949')
+print(time_series_result.sum(1).describe())
 
-# LDA model
-if save:
-    lda = gensim.models.LdaMulticore(baking_corpus, num_topics=7, id2word=baking_dictionary, passes=7, workers=16)
-else:
-    lda = gensim.models.LdaMulticore.load('saved_model.lda')
+# Method 3
+sorted_baking_data = baking_data.sort_values('조회수', ascending=False).copy()
+top2000_data = sorted_baking_data[:2000]
+top2000_data, top2000_topics_df, lda_sk2000 = analysis(top2000_data, n_topics=5)
 
-baking_data, topics = doc_labeling(baking_data, baking_corpus, lda)
+# Additional
+top2000_data['count'] = np.ones(len(top2000_data))
+views = top2000_data[['topic label', '조회수']].groupby('topic label').sum()
+views.index = ['창업, 수업, 가게', '버터, 크림치즈, 휘핑크림 선택', '재료, 완성품 보관방법', '아몬드가루, 슈가파우더, 마카롱', '실패원인']
+num_docs = top2000_data[['topic label', 'count']].groupby('topic label').sum()
 
-# Time Series
-whole_period, monthly = time_series_analysis(baking_data)
+# Qualitative Analysis
+# filters는 클래스 데이터에서 창업관련을 제외하고 레시피 추천 데이터를 추출하기 위하여 사용
+# word_filter1 = [True if ('창업' not in content) and ('가게' not in content) else False for content in each_topic_df['본문']]
+# word_filter2 = [True if ('레시피' in content) and ('추천' in content) else False for content in each_topic_df['본문']]
+# word_filter1_2000 = [True if ('창업' not in content) and ('가게' not in content) else False for content in
+#                      each_topic2000_df['본문']]
+# word_filter2_2000 = [True if ('창업' not in content) and ('가게' not in content) else False for content in
+#                      each_topic2000_df['제목']]
 
-# Save Models and Topics
-if save:
-    lda.save('saved_model.lda')
-    topics.to_csv('topics.csv', encoding='ms949')
-    for each_topic in range(0, len(topics)):
-        baking_data[['topic prob', '제목', '본문', '댓글']][baking_data['topic label'] == each_topic].to_excel(
-            'clustered_text/%d.xlsx' % each_topic, encoding='ms949')
+closer_look(baking_data, topic_num=2, content='제목')
+closer_look(top2000_data, topic_num=2, content='제목')
 
-
-# Second LDA
-each_cluster_data = second_lda(baking_data, cluster_num=0)
-
-
-# keep_data[['second topic label', 'second topic prob', '제목', '본문', '댓글']].to_excel('보관.xlsx', encoding='ms949')
