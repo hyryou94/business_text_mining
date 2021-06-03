@@ -1,26 +1,40 @@
 import json
 import os
 import re
+import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import gensim
-from gensim.models import CoherenceModel
-from gensim.models.ldamodel import LdaModel
 from kiwipiepy import Kiwi
 from konlpy.tag import Okt
 
-from sklearn.decomposition import LatentDirichletAllocation
+# from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 os.environ['JAVA_HOME'] = '/usr/bin/java'
 
 
 def data_loading():
-    baking_data = pd.read_json('data_baking/baking_v2.json', orient='table').dropna().sample(2000)
+    baking_data1 = pd.read_json('data_baking/baking_v2.json', orient='table').dropna()
+    baking_data1.columns = ['날짜', '조회수', '좋아요', '댓글개수', '제목', '닉네임', '본문', '댓글']
+
+    baking_data2 = pd.read_json('data_baking/baking_v2_cont.json', orient='table').dropna()
+    baking_data2.columns = ['날짜', '조회수', '좋아요', '댓글개수', '제목', '닉네임', '본문', '댓글']
+
+    baking_data = pd.concat([baking_data1, baking_data2], axis=1)
     return baking_data
+
+
+def parsed_data_loading(nouns=True, tokenizer='kiwi'):
+    if nouns:
+        baking_data = pd.read_json('parsed_data/parsed_baking_%s.json' % tokenizer, orient='table')
+        equip_data = pd.read_json('parsed_data/parsed_equip_%s.json' % tokenizer, orient='table')
+    else:
+        baking_data = pd.read_json('parsed_data/parsed_baking_not_nouns.json', orient='table')
+        equip_data = pd.read_json('parsed_data/parsed_equip_not_nouns.json', orient='table')
+    return baking_data, equip_data
 
 
 def clean_text(text):
@@ -156,21 +170,23 @@ def doc_labeling(df, matrix, corpus, model):
     topics_df = pd.DataFrame(topics)
 
     topic_dist = model.transform(matrix)
+    df['topic dist'] = topic_dist.tolist()
     df['topic label'] = topic_dist.argmax(1)
     df['topic prob'] = topic_dist.max(1)
     return df, topics_df
 
 
-def analysis(df, n_topics):
+def analysis(df, model_name):
     vectorizer, matrix, df = tf_idf_sklearn(df)
 
     corpus = np.array(vectorizer.get_feature_names())
-    # drop_words = ['ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ']
-    # corpus, matrix = drop_certain_words(corpus, matrix, drop_words)
+    drop_words = ['ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ']
+    corpus, matrix = drop_certain_words(corpus, matrix, drop_words)
     # 원래는 사용하지 않는 단어들을 제거하는 단계가 있으나 제출용으로 샘플을 줄이면서 해당 단계가 필요없게 됨
 
-    lda_sk = LatentDirichletAllocation(n_components=n_topics)
-    lda_sk.fit(matrix)
+    #lda_sk = LatentDirichletAllocation(n_components=n_topics)
+    #lda_sk.fit(matrix)
+    lda_sk = pickle.load(open(model_name, 'rb'))
 
     df, topics_df = doc_labeling(df, matrix, corpus, lda_sk)
     return df, topics_df, lda_sk

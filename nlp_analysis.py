@@ -1,20 +1,14 @@
-import os
-import pickle
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
-
-from helper_nlp import data_loading, cleansing, tokenization, tf_idf_sklearn, count_sklearn, analysis, drop_certain_words, \
-    display_topics, time_series_analysis, doc_labeling, closer_look
+from helper_nlp import parsed_data_loading, count_sklearn, analysis, time_series_analysis, closer_look
 
 # Input
 tokenizer = 'kiwi'
 
 # Analysis
-baking_data = data_loading() # data loading
-baking_data = tokenization(cleansing(baking_data)) # cleansing and tokenizing
+baking_data, equip_data = parsed_data_loading(nouns=False, tokenizer='kiwi') # data loading
 
 # Frequency analysis
 baking_count, baking_dtm = count_sklearn(baking_data)
@@ -22,7 +16,13 @@ count_corpus_sk = baking_count.get_feature_names()
 frequency = pd.DataFrame(baking_dtm.sum(0), columns=count_corpus_sk).T.sort_values(0, ascending=False)
 
 # Method 1
-baking_data, topics_df, lda_sk = analysis(baking_data, n_topics=20)
+baking_data, topics_df, lda_sk = analysis(baking_data, model_name='lda_model_sk3.p')
+
+len(baking_data[baking_data['topic label'] == 14])/len(baking_data)
+len(baking_data[baking_data['topic label'] == 16])/len(baking_data)
+len(baking_data[baking_data['topic label'] == 0])/len(baking_data)
+len(baking_data[baking_data['topic label'] == 5])/len(baking_data)
+len(baking_data[baking_data['topic label'] == 2])/len(baking_data)
 
 # Method 2
 top_filtering = [True if each_label in [14, 16, 0, 5, 2] else False for each_label in baking_data['topic label']]
@@ -38,7 +38,7 @@ print(time_series_result.sum(1).describe())
 # Method 3
 sorted_baking_data = baking_data.sort_values('조회수', ascending=False).copy()
 top2000_data = sorted_baking_data[:2000]
-top2000_data, top2000_topics_df, lda_sk2000 = analysis(top2000_data, n_topics=5)
+top2000_data, top2000_topics_df, lda_sk2000 = analysis(top2000_data, n_topics=5, model_name='lda_sk_top2000')
 
 # Additional
 top2000_data['count'] = np.ones(len(top2000_data))
