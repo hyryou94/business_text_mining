@@ -176,6 +176,50 @@ def analysis(df, n_topics):
     return df, topics_df, lda_sk
 
 
+# Pass optimization
+def pass_opt(corpus, dictionary, data, min_pass, max_pass):
+    perplexity_value = []
+    coherence_value = []
+
+    for p in range(min_pass, max_pass):
+        print(p)
+        ldamodel = gensim.models.LdaMulticore(corpus, num_topics=20, id2word=dictionary, passes=p, workers=16)
+        coherence_model_lda = CoherenceModel(model=ldamodel, texts=data['text_tokenized'],
+                                             dictionary=dictionary, topn=10, coherence='c_v')
+        perplexity_value.append(ldamodel.log_perplexity(corpus))
+        coherence_value.append(coherence_model_lda.get_coherence())
+
+    # graphing_opt_res(coherence_value, perplexity_value, min_pass, max_pass)
+
+    perplexity = pd.DataFrame(perplexity_value, index=range(min_pass, max_pass), columns=['perplexity'])
+    coherence = pd.DataFrame(coherence_value, index=range(min_pass, max_pass), columns=['coherence'])
+    parameter_tuning = pd.concat([perplexity, coherence], axis=1)
+
+    return parameter_tuning
+
+
+# Num_topic optimization
+def lda_param_opt(corpus, dictionary, data, pass_value=20, min_topic=2, max_topic=40):
+    perplexity_value = []
+    coherence_value = []
+    for i in range(min_topic, max_topic + 1):
+        print(i)
+        ldamodel = gensim.models.LdaMulticore(corpus, num_topics=i, id2word=dictionary,
+                                              passes=pass_value, workers=16)
+        coherence_model_lda = CoherenceModel(model=ldamodel, texts=data['text_tokenized'],
+                                             dictionary=dictionary, topn=10, coherence='c_v')
+        perplexity_value.append(ldamodel.log_perplexity(corpus))
+        coherence_value.append(coherence_model_lda.get_coherence())
+
+    # graphing_opt_res(coherence_value, perplexity_value, min_topic, max_topic)
+
+    perplexity = pd.DataFrame(perplexity_value, index=range(min_topic, max_topic+1), columns=['perplexity'])
+    coherence = pd.DataFrame(coherence_value, index=range(min_topic, max_topic+1), columns=['coherence'])
+    parameter_tuning = pd.concat([perplexity, coherence], axis=1)
+
+    return parameter_tuning
+
+
 # LDA
 def time_series_analysis(df):
     df['날짜'] = pd.to_datetime(df['날짜'])
