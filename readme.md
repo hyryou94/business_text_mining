@@ -18,7 +18,7 @@
 
 2. data_baking : 베이킹 관련 질문게시판을 크롤링한 raw_data입니다.
 
-3. others : gensim으로 분석을 진행하였을 때 parameter optimizing을 위해 짠 코드입니다. Sklearn으로 변경하며 실효성은 없어졌습니다.
+3. others : parameter optimizing을 위해 짠 코드입니다.
 
 ## Codes
 
