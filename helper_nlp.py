@@ -20,6 +20,7 @@ os.environ['JAVA_HOME'] = '/usr/bin/java'
 
 def data_loading():
     baking_data = pd.read_json('data_baking/baking_v2.json', orient='table').dropna().sample(2000)
+    baking_data.columns = ['날짜', '조회수', '댓글개수', '좋아요', '제목', '닉네임', '본문', '댓글']
     return baking_data
 
 
