@@ -36,9 +36,11 @@ plt.show()
 print(time_series_result.sum(1).describe())
 
 # Method 3
+baking_data['조회수'] = baking_data['조회수'].apply(
+    lambda x: int(x.replace('조회 ', '').replace(',', '').replace('.', '').replace('만', '000')))
 sorted_baking_data = baking_data.sort_values('조회수', ascending=False).copy()
 top2000_data = sorted_baking_data[:2000]
-top2000_data, top2000_topics_df, lda_sk2000 = analysis(top2000_data, n_topics=5, model_name='lda_sk_top2000')
+top2000_data, top2000_topics_df, lda_sk2000 = analysis(top2000_data, model_name='lda_model_sk_top2000.p')
 
 # Additional
 top2000_data['count'] = np.ones(len(top2000_data))
@@ -57,4 +59,3 @@ num_docs = top2000_data[['topic label', 'count']].groupby('topic label').sum()
 
 closer_look(baking_data, topic_num=2, content='제목')
 closer_look(top2000_data, topic_num=2, content='제목')
-

@@ -180,9 +180,10 @@ def analysis(df, model_name):
     vectorizer, matrix, df = tf_idf_sklearn(df)
 
     corpus = np.array(vectorizer.get_feature_names())
-    drop_words = ['ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ']
-    corpus, matrix = drop_certain_words(corpus, matrix, drop_words)
-    # 원래는 사용하지 않는 단어들을 제거하는 단계가 있으나 제출용으로 샘플을 줄이면서 해당 단계가 필요없게 됨
+    if '2000' not in model_name:
+        drop_words = ['ㅋㅋ', 'ㅋㅋㅋ', 'ㅎㅎ', 'ㅜㅜ', 'ㅠㅜ', 'ㅠㅠ', 'ㅠㅠㅠ', 'ㅠㅠㅠㅠ']
+        corpus, matrix = drop_certain_words(corpus, matrix, drop_words)
+        # 원래는 사용하지 않는 단어들을 제거하는 단계가 있으나 제출용으로 샘플을 줄이면서 해당 단계가 필요없게 됨
 
     #lda_sk = LatentDirichletAllocation(n_components=n_topics)
     #lda_sk.fit(matrix)
