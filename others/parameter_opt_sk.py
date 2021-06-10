@@ -15,7 +15,7 @@ baking_vectorizer, baking_matrix, baking_data2 = tf_idf_sklearn(baking_data)
 baking_corpus_sk = np.array(baking_vectorizer.get_feature_names())
 
 # Define Search Param
-search_params = {'n_components': np.arange(5, 11)}
+search_params = {'n_components': np.arange(5, 40)}
 
 # Init the model
 lda = LatentDirichletAllocation(learning_decay=0.9)
