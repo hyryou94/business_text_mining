@@ -1,6 +1,4 @@
-# Business Text Mining : Baking QnA Analysis by Ho-Young Ryou
-
-한양대학교 경영일반대학원 석박사 5기 재무금융전공 2019144749 류호영 
+# Business Text Mining : Baking QnA Analysis
 
 * 이 git은 crawling과 analysis로 두 파트로 나누어져 있습니다.
 
